@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/SkipMaster.ConsoleApp/SkipMaster.ConsoleApp.csproj" />
+    <Project Path="src/SkipMaster.Contracts/SkipMaster.Contracts.csproj" />
     <Project Path="src/SkipMaster.Core/SkipMaster.Core.csproj" />
     <Project Path="src/SkipMaster.Strategy/SkipMaster.Strategy.csproj" />
   </Folder>

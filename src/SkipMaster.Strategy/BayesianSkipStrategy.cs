@@ -1,12 +1,25 @@
-using SkipMaster.Core;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace SkipMaster.Strategy;
 
 /// <summary>
 /// Байесовская стратегия «Мастер прогулов».
-/// Для каждого преподавателя держит 22 гипотезы о его правиле, отбрасывает те, что противоречат
-/// истории, и прогуливает пару, только когда вероятность вопроса настолько мала, что
-/// риск потерять всё накопленное не перевешивает +1 к удовольствию. Подробно — docs/strategy.md.
+/// <para>
+/// Для каждого преподавателя держит 22 гипотезы о его правиле: случайное 50%, «как вчера A» (6 штук)
+/// и «вчера A xor Б» (15 неупорядоченных пар). После каждого дня вычёркивает детерминированные гипотезы,
+/// которые противоречат истории; правдоподобие случайного правила за n дней равно 2^-n.
+/// </para>
+/// <para>
+/// Полное состояние каждого прошедшего дня известно: на посещённой паре исход виден в истории,
+/// а прогулянная пара, раз студент всё ещё в игре, точно прошла без вопроса.
+/// </para>
+/// <para>
+/// Пару прогуливает, только когда вероятность вопроса так мала, что риск потерять всё накопленное
+/// не перевешивает +1 к удовольствию: выбирает k самых безопасных пар, максимизируя
+/// P(ни на одной не спросят) * (на кону + k).
+/// </para>
 /// </summary>
 public sealed class BayesianSkipStrategy : ISkipStrategy
 {
@@ -14,24 +27,49 @@ public sealed class BayesianSkipStrategy : ISkipStrategy
     private const int SemesterDays = 100;
     private const double RandomRulePrior = 1.0 / 3;
     // Оценка среднего удовольствия за будущий день. Это неподвижная точка самой стратегии:
-    // в среднем она набирает ≈346 за семестр, то есть ≈3.5 в день. Подробнее — docs/strategy.md.
+    // в среднем она набирает ≈346 за семестр, то есть ≈3.5 в день.
     private const double ExpectedDailyPleasure = 3.5;
 
-    /// <summary>Детерминированная гипотеза: «как вчера A» (B &lt; 0) или «вчера A xor B».</summary>
-    private readonly record struct Hypothesis(int A, int B, double Prior)
-    {
-        public bool Predict(bool[] yesterday) => B < 0 ? yesterday[A] : yesterday[A] != yesterday[B];
-    }
-
-    // 6 гипотез правила 2 и 15 гипотез правила 3 (xor симметричен, поэтому пары неупорядоченные).
+    // Детерминированные гипотезы: «как вчера A» (B < 0) или «вчера A xor B».
     // Априорно каждый тип правила равновероятен, A и Б — равновероятны.
-    private static readonly Hypothesis[] Hypotheses = BuildHypotheses();
+    private static readonly int[] HypothesisA;
+    private static readonly int[] HypothesisB;
+    private static readonly double[] HypothesisPrior;
 
     private readonly bool[][] _alive = new bool[SubjectCount][];
     private bool[] _yesterday = new bool[SubjectCount];
     private int? _lastDay;
     private int _daysObserved;
     private int _pleasure;
+
+    static BayesianSkipStrategy()
+    {
+        var a = new List<int>();
+        var b = new List<int>();
+        var prior = new List<double>();
+
+        for (int i = 0; i < SubjectCount; i++)
+        {
+            a.Add(i);
+            b.Add(-1);
+            prior.Add(1.0 / 3 / SubjectCount);
+        }
+
+        int pairs = SubjectCount * (SubjectCount - 1) / 2;
+        for (int i = 0; i < SubjectCount; i++)
+        {
+            for (int j = i + 1; j < SubjectCount; j++)
+            {
+                a.Add(i);
+                b.Add(j);
+                prior.Add(1.0 / 3 / pairs);
+            }
+        }
+
+        HypothesisA = a.ToArray();
+        HypothesisB = b.ToArray();
+        HypothesisPrior = prior.ToArray();
+    }
 
     public BayesianSkipStrategy() => Reset();
 
@@ -52,7 +90,7 @@ public sealed class BayesianSkipStrategy : ISkipStrategy
     private void Reset()
     {
         for (int i = 0; i < SubjectCount; i++)
-            _alive[i] = Enumerable.Repeat(true, Hypotheses.Length).ToArray();
+            _alive[i] = Enumerable.Repeat(true, HypothesisPrior.Length).ToArray();
 
         _yesterday = new bool[SubjectCount];
         _lastDay = null;
@@ -63,7 +101,6 @@ public sealed class BayesianSkipStrategy : ISkipStrategy
     /// <summary>
     /// Восстанавливает, кого спросили в прошлый день. Если был на паре — исход виден в истории.
     /// Если прогулял — раз нас всё ещё спрашивают о решении, значит, не вылетели, то есть не спросили.
-    /// Поэтому полное состояние каждого дня известно всегда.
     /// </summary>
     private void Observe(int day, IReadOnlyStudentHistory history)
     {
@@ -79,9 +116,9 @@ public sealed class BayesianSkipStrategy : ISkipStrategy
 
         for (int teacher = 0; teacher < SubjectCount; teacher++)
         {
-            for (int h = 0; h < Hypotheses.Length; h++)
+            for (int h = 0; h < HypothesisPrior.Length; h++)
             {
-                if (_alive[teacher][h] && Hypotheses[h].Predict(_yesterday) != asked[teacher])
+                if (_alive[teacher][h] && Predict(h, _yesterday) != asked[teacher])
                     _alive[teacher][h] = false;
             }
         }
@@ -135,30 +172,23 @@ public sealed class BayesianSkipStrategy : ISkipStrategy
         double total = randomWeight;
         double asked = randomWeight * 0.5;
 
-        for (int h = 0; h < Hypotheses.Length; h++)
+        for (int h = 0; h < HypothesisPrior.Length; h++)
         {
             if (!_alive[teacher][h])
                 continue;
 
-            total += Hypotheses[h].Prior;
-            if (Hypotheses[h].Predict(_yesterday))
-                asked += Hypotheses[h].Prior;
+            total += HypothesisPrior[h];
+            if (Predict(h, _yesterday))
+                asked += HypothesisPrior[h];
         }
 
         return asked / total;
     }
 
-    private static Hypothesis[] BuildHypotheses()
+    private static bool Predict(int hypothesis, bool[] yesterday)
     {
-        var result = new List<Hypothesis>();
-        for (int a = 0; a < SubjectCount; a++)
-            result.Add(new Hypothesis(a, -1, 1.0 / 3 / SubjectCount));
-
-        int pairs = SubjectCount * (SubjectCount - 1) / 2;
-        for (int a = 0; a < SubjectCount; a++)
-            for (int b = a + 1; b < SubjectCount; b++)
-                result.Add(new Hypothesis(a, b, 1.0 / 3 / pairs));
-
-        return result.ToArray();
+        int a = HypothesisA[hypothesis];
+        int b = HypothesisB[hypothesis];
+        return b < 0 ? yesterday[a] : yesterday[a] != yesterday[b];
     }
 }

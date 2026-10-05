@@ -1,7 +1,12 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
+  <!--
+    Проект для конкурса стратегий: .NET 10, один класс, без NuGet-пакетов.
+    Единственная зависимость — контракты из task.md. SkipMaster.Contracts заменяет контракты раннера;
+    при сдаче эта ссылка указывает на сборку с контрактами, которую даст раннер.
+  -->
   <ItemGroup>
-    <ProjectReference Include="..\SkipMaster.Core\SkipMaster.Core.csproj" />
+    <ProjectReference Include="..\SkipMaster.Contracts\SkipMaster.Contracts.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
