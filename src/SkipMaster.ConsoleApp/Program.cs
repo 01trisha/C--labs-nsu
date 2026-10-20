@@ -22,30 +22,44 @@ for (int i = 0; i < args.Length; i++)
             return 1;
     }
 }
+var res = new int[10];
+for (int i = 0; i < 10; i++){
 
-var random = new Random(seed);
-ITeacherRule[] rules = TeacherRuleFactory.CreateForAllSubjects(random);
-ISkipStrategy strategy = new BayesianSkipStrategy();
+    var random = new Random(i);
+    ITeacherRule[] rules = TeacherRuleFactory.CreateForAllSubjects(random);
+    ISkipStrategy strategy = new BayesianSkipStrategy();
 
-Console.WriteLine($"seed: {seed}");
-Console.WriteLine($"стратегия: {strategy.Name}");
-Console.WriteLine("правила преподавателей (студент их не знает):");
-foreach (var subject in Subjects.All)
-    Console.WriteLine($"  {subject.DisplayName(),-22} {rules[(int)subject].Description}");
-Console.WriteLine();
-
-Action<DayOutcome>? log = verbose ? PrintDay : null;
-SemesterResult result = new SemesterSimulator(rules).Run(strategy, log);
-
-if (verbose)
+    Console.WriteLine($"seed: {seed}");
+    Console.WriteLine($"стратегия: {strategy.Name}");
+    Console.WriteLine("правила преподавателей (студент их не знает):");
+    foreach (var subject in Subjects.All)
+        Console.WriteLine($"  {subject.DisplayName(),-22} {rules[(int)subject].Description}");
     Console.WriteLine();
 
-if (result.Expelled)
-    Console.WriteLine($"ВЫЛЕТ на дне {result.ExpelledOnDay}: спросили по «{result.ExpelledOn!.Value.DisplayName()}» на прогуле");
+    Action<DayOutcome>? log = verbose ? PrintDay : null;
+    SemesterResult result = new SemesterSimulator(rules).Run(strategy, log);
+    res[i] = result.TotalPleasure;
 
-Console.WriteLine($"прогуляно пар: {result.SkippedClasses}");
-Console.WriteLine($"общее удовольствие: {result.TotalPleasure}");
-Console.WriteLine($"среднее удовольствие/день: {result.AveragePerDay:F2}");
+
+    if (verbose)
+        Console.WriteLine();
+
+    if (result.Expelled)
+        Console.WriteLine($"ВЫЛЕТ на дне {result.ExpelledOnDay}: спросили по «{result.ExpelledOn!.Value.DisplayName()}» на прогуле");
+
+    Console.WriteLine($"прогуляно пар: {result.SkippedClasses}");
+    Console.WriteLine($"общее удовольствие: {result.TotalPleasure}");
+    Console.WriteLine($"среднее удовольствие/день: {result.AveragePerDay:F2}");
+}
+var maxSum = 0;
+for (int i = 0; i < 10; i++ ){
+    if (res[i] > maxSum){
+        maxSum = res[i];
+    }
+}
+
+Console.WriteLine(maxSum);
+
 return 0;
 
 static void PrintDay(DayOutcome day)

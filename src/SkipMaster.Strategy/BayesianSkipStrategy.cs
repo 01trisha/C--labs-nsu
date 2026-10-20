@@ -53,7 +53,7 @@ public sealed class BayesianSkipStrategy : ISkipStrategy
         _pleasure = 0;
     }
 
-    //на прогуле точно не спросили, раз мы ещё не вылетели
+    //обучаемся на прошедшем дне, на прогуле точно не спросили, раз мы ещё не вылетели
     private void Observe(int day, IReadOnlyStudentHistory history)
     {
         var asked = new bool[SubjectCount];

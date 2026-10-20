@@ -44,11 +44,11 @@ public sealed class SemesterSimulator
             bool[] attend = strategy.DecideDay(day, history);
             if (attend is null || attend.Length != Subjects.Count)
                 throw new InvalidOperationException($"Стратегия «{strategy.Name}» должна вернуть массив из {Subjects.Count} решений.");
-
+            //преподы решают спрашивать ли
             var asked = new bool[Subjects.Count];
             for (int i = 0; i < asked.Length; i++)
                 asked[i] = _rules[i].ShouldAsk(yesterday);
-
+            //проверка на вылет
             for (int i = 0; i < asked.Length; i++)
             {
                 if (attend[i] || !asked[i])
