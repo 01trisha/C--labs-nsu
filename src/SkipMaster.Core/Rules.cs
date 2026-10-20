@@ -1,15 +1,15 @@
 namespace SkipMaster.Core;
 
-/// <summary>Правило, по которому преподаватель решает, спрашивать ли студента сегодня.</summary>
+//как препод решает, спросить сегодня или нет
 public interface ITeacherRule
 {
-    /// <param name="yesterday">Кого спросили вчера, индекс — (int)Subject.</param>
+    //yesterday[i] — спросили ли вчера по предмету i
     bool ShouldAsk(IReadOnlyList<bool> yesterday);
 
     string Description { get; }
 }
 
-/// <summary>Правило 1: спросить с вероятностью 50%.</summary>
+//правило 1: монетка 50/50
 public sealed class RandomRule(Random random) : ITeacherRule
 {
     public bool ShouldAsk(IReadOnlyList<bool> yesterday) => random.Next(2) == 0;
@@ -17,7 +17,7 @@ public sealed class RandomRule(Random random) : ITeacherRule
     public string Description => "случайно, 50%";
 }
 
-/// <summary>Правило 2: спросить, если вчера спросили по предмету A.</summary>
+//правило 2: спрашивает, если вчера спросили по a
 public sealed class FollowRule(Subject a) : ITeacherRule
 {
     public Subject A => a;
@@ -27,7 +27,7 @@ public sealed class FollowRule(Subject a) : ITeacherRule
     public string Description => $"если вчера спросили по «{a.DisplayName()}»";
 }
 
-/// <summary>Правило 3: спросить, если вчера спросили ровно по одному из предметов A и Б.</summary>
+//правило 3: спрашивает, если вчера спросили ровно по одному из a и б
 public sealed class XorRule(Subject a, Subject b) : ITeacherRule
 {
     public Subject A => a;
@@ -40,9 +40,7 @@ public sealed class XorRule(Subject a, Subject b) : ITeacherRule
 
 public static class TeacherRuleFactory
 {
-    /// <summary>
-    /// Случайное правило: тип равновероятно из трёх, A и Б — любые предметы (в том числе свой), A ≠ Б.
-    /// </summary>
+    //случайный тип правила, a и б любые, но разные
     public static ITeacherRule CreateRandom(Random random)
     {
         int kind = random.Next(3);

@@ -1,8 +1,7 @@
 using SkipMaster.Core;
 using SkipMaster.Strategy;
 
-// Лаба 1: один семестр (100 дней) для одной стратегии.
-// Запуск: dotnet run --project src/SkipMaster.ConsoleApp -- [--seed N] [--verbose]
+//лаба 1, запуск: dotnet run --project src/SkipMaster.ConsoleApp -- [--seed n] [--verbose]
 
 int seed = Random.Shared.Next();
 bool verbose = false;
@@ -18,8 +17,8 @@ for (int i = 0; i < args.Length; i++)
             verbose = true;
             break;
         default:
-            Console.Error.WriteLine($"Неизвестный аргумент: {args[i]}");
-            Console.Error.WriteLine("Использование: SkipMaster.ConsoleApp [--seed N] [--verbose]");
+            Console.Error.WriteLine($"unknown arg: {args[i]}");
+            Console.Error.WriteLine("using: SkipMaster.ConsoleApp [--seed n] [--verbose]");
             return 1;
     }
 }
@@ -28,9 +27,9 @@ var random = new Random(seed);
 ITeacherRule[] rules = TeacherRuleFactory.CreateForAllSubjects(random);
 ISkipStrategy strategy = new BayesianSkipStrategy();
 
-Console.WriteLine($"Seed: {seed}");
-Console.WriteLine($"Стратегия: {strategy.Name}");
-Console.WriteLine("Правила преподавателей (студент их не знает):");
+Console.WriteLine($"seed: {seed}");
+Console.WriteLine($"стратегия: {strategy.Name}");
+Console.WriteLine("правила преподавателей (студент их не знает):");
 foreach (var subject in Subjects.All)
     Console.WriteLine($"  {subject.DisplayName(),-22} {rules[(int)subject].Description}");
 Console.WriteLine();
@@ -42,17 +41,16 @@ if (verbose)
     Console.WriteLine();
 
 if (result.Expelled)
-    Console.WriteLine($"ВЫЛЕТ на дне {result.ExpelledOnDay}: спросили по «{result.ExpelledOn!.Value.DisplayName()}» на прогуле.");
+    Console.WriteLine($"ВЫЛЕТ на дне {result.ExpelledOnDay}: спросили по «{result.ExpelledOn!.Value.DisplayName()}» на прогуле");
 
-Console.WriteLine($"Прогуляно пар:             {result.SkippedClasses}");
-Console.WriteLine($"Общее удовольствие:        {result.TotalPleasure}");
-Console.WriteLine($"Среднее удовольствие/день: {result.AveragePerDay:F2}");
+Console.WriteLine($"прогуляно пар: {result.SkippedClasses}");
+Console.WriteLine($"общее удовольствие: {result.TotalPleasure}");
+Console.WriteLine($"среднее удовольствие/день: {result.AveragePerDay:F2}");
 return 0;
 
 static void PrintDay(DayOutcome day)
 {
-    // По символу на предмет в порядке enum Subject: '.' — был, не спросили; '?' — был, спросили;
-    // '-' — прогулял, не спросили; '!' — прогулял, спросили (вылет).
+    //. был   ? был и спросили   - прогулял   ! прогулял и спросили
     var marks = new char[Subjects.Count];
     for (int i = 0; i < marks.Length; i++)
         marks[i] = (day.Attended[i], day.Asked[i]) switch

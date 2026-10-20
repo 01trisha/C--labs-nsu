@@ -1,9 +1,6 @@
 namespace SkipMaster.Core;
 
-/// <summary>
-/// История студента. Хранит полную правду о днях, но наружу отдаёт только то,
-/// что студент мог увидеть: исход пары известен, только если он на ней был.
-/// </summary>
+//хранит всё, но отдаёт только то, что студент реально видел
 public sealed class StudentHistory : IReadOnlyStudentHistory
 {
     private readonly Dictionary<int, (bool[] Attended, bool[] Asked)> _days = new();

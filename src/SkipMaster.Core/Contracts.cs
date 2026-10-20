@@ -1,36 +1,30 @@
 namespace SkipMaster.Core;
 
-// Контракты из условия конкурса стратегий (task.md) — менять нельзя.
+//контракты из условия конкурса, не трогаем
 
 public enum Subject
 {
-    Calculus,           // Матанализ
-    LinearAlgebra,      // Линейная алгебра
-    DiscreteMath,       // Дискретная математика
-    Programming,        // Программирование
-    Physics,            // Физика
-    English             // Английский язык
+    Calculus,           //матан
+    LinearAlgebra,      //линал
+    DiscreteMath,       //дискретка
+    Programming,        //прога
+    Physics,            //физика
+    English             //английский
 }
 
 public interface ISkipStrategy
 {
     string Name { get; }
 
-    /// <summary>
-    /// Решение на день: для каждого предмета — идти на пару (true) или прогулять (false).
-    /// Вызывается один раз в начале каждого дня, до того как станут известны сегодняшние исходы.
-    /// </summary>
+    //true — иду на пару, false — прогуливаю
     bool[] DecideDay(int day, IReadOnlyStudentHistory history);
 }
 
 public interface IReadOnlyStudentHistory
 {
-    /// <summary>Был ли студент на паре по предмету в указанный день.</summary>
+    //был ли на паре в этот день
     bool Attended(int day, Subject subject);
 
-    /// <summary>
-    /// Спросили ли по предмету в указанный день — известно только если Attended(day, subject) == true.
-    /// Если информации еще нет то null
-    /// </summary>
+    //спросили ли — видно только если был на паре, иначе null
     bool? WasAsked(int day, Subject subject);
 }

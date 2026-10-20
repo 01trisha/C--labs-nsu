@@ -1,6 +1,6 @@
 namespace SkipMaster.Core;
 
-/// <summary>Итог одного дня. Attended и Asked индексируются как (int)Subject.</summary>
+//что было за день, массивы по индексу предмета
 public sealed record DayOutcome(int Day, bool[] Attended, bool[] Asked, int TotalPleasure, Subject? ExpelledOn);
 
 public sealed record SemesterResult(
@@ -15,7 +15,7 @@ public sealed record SemesterResult(
     public double AveragePerDay => (double)TotalPleasure / DaysInSemester;
 }
 
-/// <summary>Эмулятор семестра: каждый день спрашивает стратегию и применяет правила преподавателей.</summary>
+//гоняет семестр: спросил стратегию, применил правила, посчитал
 public sealed class SemesterSimulator
 {
     public const int DefaultDays = 100;
@@ -35,7 +35,7 @@ public sealed class SemesterSimulator
     public SemesterResult Run(ISkipStrategy strategy, Action<DayOutcome>? onDayCompleted = null)
     {
         var history = new StudentHistory();
-        var yesterday = new bool[Subjects.Count]; // в первый день считаем, что вчера никого не спрашивали
+        var yesterday = new bool[Subjects.Count]; //в первый день вчера никого не спрашивали
         int pleasure = 0;
         int skipped = 0;
 
@@ -54,7 +54,7 @@ public sealed class SemesterSimulator
                 if (attend[i] || !asked[i])
                     continue;
 
-                // Спросили на прогуле — вылет: всё накопленное сгорает, дальше дни не идут.
+                //спросили на прогуле — вылет, всё сгорает
                 var subject = (Subject)i;
                 onDayCompleted?.Invoke(new DayOutcome(day, attend, asked, 0, subject));
                 return new SemesterResult(0, _days, day, skipped, true, day, subject);
@@ -63,7 +63,7 @@ public sealed class SemesterSimulator
             history.Record(day, attend, asked);
             int skippedToday = attend.Count(a => !a);
             skipped += skippedToday;
-            pleasure += 1 + skippedToday; // пирожок + прогулы
+            pleasure += 1 + skippedToday; //пирожок + прогулы
             yesterday = asked;
 
             onDayCompleted?.Invoke(new DayOutcome(day, attend, asked, pleasure, null));
